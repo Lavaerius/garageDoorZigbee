@@ -18,7 +18,7 @@ import struct
 
 # arduino_addr = 0x48
 # senddata = 0
-
+time.sleep(3)
 x = xbee.XBee()
 #xbee.atcmd('NT', 0xFF)
 #tp = xbee.atcmd('TP')1A
@@ -62,13 +62,13 @@ print("receiving")
 while 1 != 0:
     blorp = xbee.receive()
     if blorp is not None:
-        if blorp['cluster']==5:
+        if blorp['cluster']==5: #active endpoint request
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             print(b[0])
             payload=bytes([b[0], 00, b[1], b[2], 1, 8])
             xbee.transmit(xbee.ADDR_COORDINATOR,payload,source_ep=0,dest_ep=0,cluster=32773, profile=0, tx_options=0)
-        if blorp['cluster']==4:
+        if blorp['cluster']==4: #simple descriptor request
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             print(b[0])
@@ -77,6 +77,19 @@ while 1 != 0:
         if blorp['cluster'] == 0:
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
+            for x in b:
+                print(x)
+        if blorp['cluster'] == 2: #node descriptor request
+            print(bytes(blorp['payload']))
+            b = bytearray(blorp['payload'])
+            print(b[0])
+            payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 3, 0, 0, 3, 0, 6, 0, 0])
+            xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=0, dest_ep=0, cluster=32772, profile=0,
+                          tx_options=0)
+        if blorp['cluster'] == 32770: #node descriptor response
+            print(bytes(blorp['payload']))
+            b = bytearray(blorp['payload'])
+            print("Node descriptor response integer payload")
             for x in b:
                 print(x)
         print(blorp)
