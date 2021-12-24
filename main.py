@@ -14,41 +14,45 @@ import struct
 # default to everything off and 0 at power on.
 #  in the future, we can try to reclaim previous state.
 #  Hopefully this lamp won't turn off very often
+def status_cb(status):
+    print("received status: {:02x}".format(status))
 
-
+xbee.modem_status.callback(status_cb)
 # arduino_addr = 0x48
 # senddata = 0
 time.sleep(3)
 x = xbee.XBee()
 #xbee.atcmd('NT', 0xFF)
 #tp = xbee.atcmd('TP')1A
+xbee.atcmd('KY',b'\x5A\x69\x67\x42\x65\x65\x41\x6C\x6C\x69\x61\x6E\x63\x65\x30\x39')
 print(xbee.atcmd('MY'))
 print("transmitting")
 srcaddr = int(xbee.atcmd('MY'))
 print(xbee.atcmd('AI'))
 xbee.atcmd('CN')
-print(srcaddr)
+time.sleep(3)
 srcarry = srcaddr.to_bytes(2,"big")
-print(srcarry)
+
+
 initial_payload=bytes([171, srcarry[1], srcarry[0], 141, 194, 209, 65, 0, 162, 19, 0, 142])
-leave_load=bytes([171, 141, 194, 209, 65, 0, 162, 19, 0, 2])
+leave_load=bytes([171, srcarry[1], srcarry[0], 209, 65, 0, 162, 19, 0, 2])
 print(initial_payload)
 #xbee.transmit(xbee.ADDR_COORDINATOR, b'\xAB\xF7\x6A\x8D\xC2\xD1\x41\x00\xA2\x13\x00\x8E', source_ep=0, dest_ep=0, cluster=19, profile=0, tx_options=0)
 #xbee.transmit(xbee.ADDR_COORDINATOR, b'\xAB\xF7\x6A\x8D\xC2\xD1\x41\x00\xA2\x13\x00\x8E', source_ep=0, dest_ep=0, cluster=19, profile=0, tx_options=0)
 send=0
 lame = 0
-while lame < 3:
-    xbee.receive()
-    lame += 1
+#while lame < 3:
+#    xbee.receive()
+#    lame += 1
 
-while send==0:
-    try:
-        if xbee.transmit(xbee.ADDR_COORDINATOR, leave_load, source_ep=0, dest_ep=0, cluster=52, profile=0, tx_options=0) is None:
-            send = 1
-        print("leaving")
-    except OSError as e:
-        print("leaving transmit error")
-    send=1
+#while send==0:
+#    try:
+#        if xbee.transmit(xbee.ADDR_COORDINATOR, leave_load, source_ep=0, dest_ep=0, cluster=52, profile=0, tx_options=0) is None:
+#            send = 1
+#        print("leaving")
+#    except OSError as e:
+#        print("leaving transmit error")
+#    send=1
 send=0
 time.sleep(1)
 while send==0:
@@ -67,14 +71,37 @@ while 1 != 0:
             b = bytearray(blorp['payload'])
             print(b[0])
             payload=bytes([b[0], 00, b[1], b[2], 1, 8])
-            xbee.transmit(xbee.ADDR_COORDINATOR,payload,source_ep=0,dest_ep=0,cluster=32773, profile=0, tx_options=0)
+            try:
+                if xbee.transmit(xbee.ADDR_COORDINATOR,payload,source_ep=0,dest_ep=0,cluster=32773, profile=0, tx_options=0) is None:
+                    send = 1
+                    print("sent-endpoint-response")
+            except OSError as e:
+                print("joining transmit error")
+
         if blorp['cluster']==4: #simple descriptor request
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             print(b[0])
             payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 3, 0, 0, 3, 0, 6, 0, 0])
-            xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=0,dest_ep=0,cluster=32772, profile=0, tx_options=0)
-        if blorp['cluster'] == 0:
+            try:
+                if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=0,dest_ep=0,cluster=32772, profile=0, tx_options=0) is None:
+                    send = 1
+                    print("simple descriptor response")
+            except OSError as e:
+                print("joining transmit error")
+
+        if blorp['cluster'] == 0: #network address request
+            if blorp['profile'] == 260:
+              resp = bytearray(blorp['payload'])
+              payload = bytes([b[0], 0, b[1], b[2]])
+              try:
+                  if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=blorp['dest_ep'], dest_ep=blorp['source_ep'], cluster=blorp['cluster'], profile=blorp['profile'],
+                            tx_options=0) is None:
+                      send = 1
+                  print("joining")
+              except OSError as e:
+                  print("joining transmit error")
+
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             for x in b:
@@ -83,16 +110,22 @@ while 1 != 0:
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             print(b[0])
-            payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 3, 0, 0, 3, 0, 6, 0, 0])
-            xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=0, dest_ep=0, cluster=32772, profile=0,
-                          tx_options=0)
+            payload = bytes([b[0], 00, b[1], b[2], 4, 143, 120, 8, 80, 160, 0, 1, 44, 160, 0, 0])
+            try:
+                if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=0, dest_ep=0, cluster=32772, profile=blorp['profile'],
+                          tx_options=0) is None:
+                    send = 1
+                print("joining")
+            except OSError as e:
+                print("joining transmit error")
+
         if blorp['cluster'] == 32770: #node descriptor response
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
-            print("Node descriptor response integer payload")
-            for x in b:
-                print(x)
+            print("Node descriptor response integer payload discard")
         print(blorp)
+        #for key, value in blorp.items():
+        #1  print (key, ' : ', value)
 
 #print(xbee.receive())
 #print("temperature")
