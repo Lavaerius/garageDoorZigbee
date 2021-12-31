@@ -3,6 +3,7 @@
 # xbee hardware pdf: https://www.digi.com/resources/documentation/digidocs/pdfs/90001543.pdf
 import time
 import xbee
+import spec
 import ubinascii
 from machine import I2C
 from machine import Pin
@@ -14,6 +15,10 @@ import struct
 # default to everything off and 0 at power on.
 #  in the future, we can try to reclaim previous state.
 #  Hopefully this lamp won't turn off very often
+ad0 = Pin("D0", Pin.IN, Pin.PULL_UP)
+ad1 = Pin("D1", Pin.IN, Pin.PULL_UP)
+ad2 = Pin("D2", Pin.IN, Pin.PULL_UP)
+ad4 = Pin("D4", Pin.OUT)
 def status_cb(status):
     print("received status: {:02x}".format(status))
 
@@ -55,53 +60,75 @@ lame = 0
 #    send=1
 send=0
 time.sleep(1)
-while send==0:
-    try:
-        if xbee.transmit(xbee.ADDR_COORDINATOR, initial_payload, source_ep=0, dest_ep=0, cluster=19, profile=0, tx_options=0) is None:
-            send = 1
-        print("joining")
-    except OSError as e:
-        print("joining transmit error")
+
+def fancy_transmit(payload, source_ep, dest_ep, cluster,profile):
+    send = 0
+    while send==0:
+        try:
+            if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=source_ep, dest_ep=dest_ep, cluster=cluster, profile=profile,
+                             tx_options=0) is None:
+                send = 1
+                time.sleep(1)
+        except OSError as e:
+            time.sleep(1)
+            print(payload)
+            print(e)
+
+
+fancy_transmit( payload=initial_payload, source_ep=0, dest_ep=0, cluster=19,profile=0 )
 print("receiving")
 while 1 != 0:
     blorp = xbee.receive()
     if blorp is not None:
+        print(blorp)
+        if blorp['cluster'] == 6: #genOnOffCluster in HA Profile
+            if blorp['profile'] == 260: #HA profile
+              cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(blorp['cluster'], blorp['payload'])
+              if 'command' in kwargs:
+                if kwargs['commands'][0] == 0:
+                  ad4.value(1)
+                  time.sleep(1)
+                  ad4.value(0)
+                if kwargs['commands'][1] == 0:
+                  ad4.value(1)
+                  time.sleep(1)
+                  ad4.value(0)
+                if kwargs['commands'][2] == 0:
+                  ad4.value(1)
+                  time.sleep(1)
+                  ad4.value(0)
         if blorp['cluster']==5: #active endpoint request
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             print(b[0])
             payload=bytes([b[0], 00, b[1], b[2], 1, 8])
-            try:
-                if xbee.transmit(xbee.ADDR_COORDINATOR,payload,source_ep=0,dest_ep=0,cluster=32773, profile=0, tx_options=0) is None:
-                    send = 1
-                    print("sent-endpoint-response")
-            except OSError as e:
-                print("joining transmit error")
-
+            fancy_transmit(payload=payload,source_ep=0,dest_ep=0,cluster=32773, profile=0)
+            print("sent-endpoint-response")
         if blorp['cluster']==4: #simple descriptor request
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             print(b[0])
             payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 3, 0, 0, 3, 0, 6, 0, 0])
-            try:
-                if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=0,dest_ep=0,cluster=32772, profile=0, tx_options=0) is None:
-                    send = 1
-                    print("simple descriptor response")
-            except OSError as e:
-                print("joining transmit error")
+            fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=0)
+            print("simple descriptor response")
 
         if blorp['cluster'] == 0: #network address request
             if blorp['profile'] == 260:
-              resp = bytearray(blorp['payload'])
-              payload = bytes([b[0], 0, b[1], b[2]])
-              try:
-                  if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=blorp['dest_ep'], dest_ep=blorp['source_ep'], cluster=blorp['cluster'], profile=blorp['profile'],
-                            tx_options=0) is None:
-                      send = 1
-                  print("joining")
-              except OSError as e:
-                  print("joining transmit error")
-
+              #resp = bytearray(blorp['payload'])
+              cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(blorp['cluster'], blorp['payload'])
+              print(command_name)
+              print(kwargs)
+              if 'attributes' in kwargs:
+                attr_bytes=spec.attribute_result(kwargs)
+                #payload: control byte, code bytes(2), seq copy, command identifier(read_attributes_response,
+                #payload = bytes([4, 30, 16, seq, 1, attr_bytes, 0, 8, 0])
+                payload = bytes([12, 30, 16, seq, 1])
+                payload = payload+attr_bytes
+                #payload= attr_bytes
+                print(payload)
+                fancy_transmit(payload=payload, source_ep=blorp['dest_ep'], dest_ep=blorp['source_ep'], cluster=blorp['cluster'], profile=blorp['profile'])
+              print("attribute_read_response")
+              #spec.decode_zcl(blorp['cluster'], blorp['payload'])
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             for x in b:
@@ -111,19 +138,12 @@ while 1 != 0:
             b = bytearray(blorp['payload'])
             print(b[0])
             payload = bytes([b[0], 00, b[1], b[2], 4, 143, 120, 8, 80, 160, 0, 1, 44, 160, 0, 0])
-            try:
-                if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=0, dest_ep=0, cluster=32772, profile=blorp['profile'],
-                          tx_options=0) is None:
-                    send = 1
-                print("joining")
-            except OSError as e:
-                print("joining transmit error")
-
+            fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=blorp['profile'])
+            print("node descriptor response")
         if blorp['cluster'] == 32770: #node descriptor response
             print(bytes(blorp['payload']))
             b = bytearray(blorp['payload'])
             print("Node descriptor response integer payload discard")
-        print(blorp)
         #for key, value in blorp.items():
         #1  print (key, ' : ', value)
 
