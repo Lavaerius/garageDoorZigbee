@@ -7,7 +7,7 @@ import spec
 import ubinascii
 from machine import I2C
 from machine import Pin
-from machine import Timer
+import gen
 import struct
 
 # print(" +-------------------------------------+")
@@ -62,7 +62,6 @@ lame = 0
 #    send=1
 send=0
 time.sleep(1)
-
 def fancy_transmit(payload, source_ep, dest_ep, cluster,profile):
     send = 0
     while send==0:
@@ -81,7 +80,7 @@ fancy_transmit( payload=initial_payload, source_ep=0, dest_ep=0, cluster=19,prof
 print("receiving")
 diff = 3600000
 first_report = False
-timestamp = time.tick_ms()
+timestamp = time.ticks_ms()
 while 1 != 0:
     blorp = xbee.receive()
     if blorp is not None:
@@ -89,6 +88,9 @@ while 1 != 0:
         if blorp['cluster'] == 6: #genOnOffCluster in HA Profile
             if blorp['profile'] == 260: #HA profile
               cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(blorp['cluster'], blorp['payload'])
+              print(CommandType)
+              print(command_name)
+              print(kwargs)
               if 'command' in kwargs:
                 if kwargs['commands'][0] == 0:
                   ad4.value(1)
@@ -124,7 +126,7 @@ while 1 != 0:
               print(command_name)
               print(kwargs)
               if 'attributes' in kwargs:
-                attr_bytes=spec.attribute_result(kwargs)
+                attr_bytes=gen.attribute_result(kwargs)
                 #payload: control byte, code bytes(2), seq copy, command identifier(read_attributes_response,
                 #payload = bytes([4, 30, 16, seq, 1, attr_bytes, 0, 8, 0])
                 payload = bytes([12, 30, 16, seq, 1])
@@ -151,12 +153,12 @@ while 1 != 0:
             print("Node descriptor response integer payload discard")
         #for key, value in blorp.items():
         #1  print (key, ' : ', value)
-    if (diff < time.diff(time.ticks_ms() - timestamp)) or ( not first_report )  :
+    if (diff < time.ticks_diff(time.ticks_ms(), timestamp)) or ( not first_report )  :
         timestamp = time.ticks_ms()
         first_report = True
         zcl_head = bytes([12, 30, 16, 171, 10])    
         payload = zcl_head + bytes([0,0,10,0]) #for now only return off for state report
-        fancy_transmit(payload=payload, source_ep=blorp[8], dest_ep=blorp[1], cluster=6, profile=260)
+        fancy_transmit(payload=payload, source_ep=8, dest_ep=1, cluster=6, profile=260)
 
 
 #print(xbee.receive())
