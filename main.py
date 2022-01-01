@@ -7,7 +7,9 @@ import spec
 import ubinascii
 from machine import I2C
 from machine import Pin
+from machine import Timer
 import struct
+
 # print(" +-------------------------------------+")
 # print(" +-------------------------------------+\n")
 
@@ -68,7 +70,7 @@ def fancy_transmit(payload, source_ep, dest_ep, cluster,profile):
             if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=source_ep, dest_ep=dest_ep, cluster=cluster, profile=profile,
                              tx_options=0) is None:
                 send = 1
-                time.sleep(1)
+                #time.sleep(1)
         except OSError as e:
             time.sleep(1)
             print(payload)
@@ -77,6 +79,9 @@ def fancy_transmit(payload, source_ep, dest_ep, cluster,profile):
 
 fancy_transmit( payload=initial_payload, source_ep=0, dest_ep=0, cluster=19,profile=0 )
 print("receiving")
+diff = 3600000
+first_report = False
+timestamp = time.tick_ms()
 while 1 != 0:
     blorp = xbee.receive()
     if blorp is not None:
@@ -146,6 +151,13 @@ while 1 != 0:
             print("Node descriptor response integer payload discard")
         #for key, value in blorp.items():
         #1  print (key, ' : ', value)
+    if (diff < time.diff(time.ticks_ms() - timestamp)) or ( not first_report )  :
+        timestamp = time.ticks_ms()
+        first_report = True
+        zcl_head = bytes([12, 30, 16, 171, 10])    
+        payload = zcl_head + bytes([0,0,10,0]) #for now only return off for state report
+        fancy_transmit(payload=payload, source_ep=blorp[8], dest_ep=blorp[1], cluster=6, profile=260)
+
 
 #print(xbee.receive())
 #print("temperature")
