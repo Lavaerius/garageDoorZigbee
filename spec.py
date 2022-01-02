@@ -521,6 +521,7 @@ CLUSTERS_BY_NAME = {
   }, {
     'name_support': (0x0000, 'uint8',),
   },),
+
   'scenes': (0x0005, {
   }, {
   }, {
@@ -539,28 +540,10 @@ CLUSTERS_BY_NAME = {
     'on_time': (0x4001, 'uint16',),
     'off_wait_time': (0x4002, 'uint16',),
   },),
+  'barrierControl'
   'onoff_configuration': (0x0007, {
   }, {
   }, {
-  },),
-  'level_control': (0x0008, {
-    'move_to_level': (0x00, ('level:uint8', 'time:uint16',),),
-    'move': (0x01, ('mode:enum8:up,down', 'rate:uint8',),),
-    'step': (0x02, ('mode:enum8:up,down', 'size:uint8', 'time:uint16',),),
-    'stop': (0x03, (),),
-    'move_to_level_on_off': (0x04, ('level:uint8', 'time:uint16',),),
-    'move_on_off': (0x05, ('mode:enum8:up,down', 'rate:uint8',),),
-    'step_on_off': (0x06, ('mode:enum8:up,down', 'size:uint8', 'time:uint16',),),
-    'stop_on_off': (0x07, (),),
-  }, {
-  }, {
-    'current_level': (0x0000, 'uint8',),
-    'remaining_time': (0x0001, 'uint16',),
-    'on_off_transition_time': (0x0010, 'uint16',),
-    'on_level': (0x0011, 'uint8',),
-    'on_transition_time': (0x0012, 'uint16',),
-    'off_transition_time': (0x0013, 'uint16',),
-    'default_move_rate': (0x0014, 'uint16',),
   },),
   'poll_control': (0x0020, {
   }, {
