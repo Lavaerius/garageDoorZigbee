@@ -12,10 +12,10 @@ import gen
 import com
 import struct
 
-ad0 = Pin("D0", Pin.IN, Pin.PULL_UP)
-ad1 = Pin("D1", Pin.IN, Pin.PULL_UP)
-ad2 = Pin("D2", Pin.IN, Pin.PULL_UP)
-ad4 = Pin("D4", Pin.OUT)
+#ad0 = Pin("D0", Pin.IN, Pin.PULL_UP)
+#ad1 = Pin("D1", Pin.IN, Pin.PULL_UP)
+#ad2 = Pin("D2", Pin.IN, Pin.PULL_UP)
+ad4 = Pin("D4", Pin.OUT,value=0)
 def status_cb(status):
     print("m stat: {:02x}".format(status))
 

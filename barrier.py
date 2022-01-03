@@ -8,7 +8,7 @@ class Barrier:
     barrier_position = 0
     ad0 = Pin("D0", Pin.IN, Pin.PULL_UP) #door
     ad1 = Pin("D1", Pin.IN, Pin.PULL_UP) #motor
-    ad4 = Pin("D4", Pin.OUT)
+    ad4 = Pin("D4", Pin.OUT, value=0)
     door = ad0.value()
     motor = ad1.value()
     update = False
