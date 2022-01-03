@@ -40,6 +40,8 @@ print("receiving")
 diff = 3600000
 first_report = False
 timestamp = time.ticks_ms()
+garage = barrier.Barrier()
+
 while 1 != 0:
     packet = com.receive()
     if packet is not None:
@@ -86,7 +88,7 @@ while 1 != 0:
             print(bytes(packet['payload']))
             b = bytearray(packet['payload'])
             print(b[0])
-            payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 3, 0, 0, 3, 0, 6, 0, 0])
+            payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 4, 0, 0, 3, 0, 6, 3, 1,0, 0])
             com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=0)
             print("simple descriptor response")
 
@@ -130,7 +132,7 @@ while 1 != 0:
         zcl_head = bytes([12, 30, 16, 171, 10])    
         payload = zcl_head + bytes([0,0,10,0]) #for now only return off for state report
         com.fancy_transmit(payload=payload, source_ep=8, dest_ep=1, cluster=6, profile=260)
-    barrier.watch()
+    garage.watch()
 
 #print(xbee.receive())
 #print("temperature")

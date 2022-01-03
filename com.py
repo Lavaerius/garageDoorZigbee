@@ -5,7 +5,7 @@ def receive():
 
 def fancy_transmit(payload, source_ep, dest_ep, cluster,profile):
     send = 0
-    while send==0:
+    while send == 0:
         try:
             if xbee.transmit(xbee.ADDR_COORDINATOR, payload, source_ep=source_ep, dest_ep=dest_ep, cluster=cluster, profile=profile,
                              tx_options=0) is None:

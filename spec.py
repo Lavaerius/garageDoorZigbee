@@ -527,20 +527,36 @@ CLUSTERS_BY_NAME = {
   }, {
   },),
   'onoff': (0x0006, {
-    'off': (0x00, (),),
+    'off': (0x00, (),),#command
     'on': (0x01, (),),
     'toggle': (0x02, (),),
     'off_with_effect': (0x40, ('effect_id:uint8', 'effect_variant:uint8',),),
     'on_with_recall_global_scene': (0x41, (),),
     'on_with_timed_off': (0x42, ('control:uint8', 'on_time:uint16', 'off_wait_time:uint16',),),
+  }, { #middle hash is blank, unknown what this is
   }, {
-  }, {
-    'onoff': (0x0000, 'bool',),
+    'onoff': (0x0000, 'bool',),#attribute
     'global_scene_control': (0x4000, 'bool',),
     'on_time': (0x4001, 'uint16',),
     'off_wait_time': (0x4002, 'uint16',),
   },),
-  'barrierControl'
+  'barrier_control': (0x0103, {
+    #commands
+    'go_to_percent': (0x0000, ('percentOpen:uint8'),),
+    'stop': (0x0001,(),),
+  }, {#blank middle hash like onoff
+  }, {#attribute
+    'moving_state': (0x0001, 'enum8',),
+    'safety_status': (0x0002,'map16',),
+    'capabilities': (0x0003, 'map8',),
+    'open_events': (0x0004, 'uint16',),
+    'close_events': (0x0005, 'uint16',),
+    'command_open_events': (0x0006, 'uint16',),
+    'command_close_events': (0x0007, 'uint16',),
+    'open_perioad': (0x0008, 'uint16',),
+    'close_period': (0x0009, 'uint16',),
+    'barrier_position': (0x000A, 'uint8',),
+     },),
   'onoff_configuration': (0x0007, {
   }, {
   }, {
