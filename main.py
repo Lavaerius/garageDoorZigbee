@@ -15,7 +15,7 @@ import struct
 #ad0 = Pin("D0", Pin.IN, Pin.PULL_UP)
 #ad1 = Pin("D1", Pin.IN, Pin.PULL_UP)
 #ad2 = Pin("D2", Pin.IN, Pin.PULL_UP)
-ad4 = Pin("D4", Pin.OUT,value=0)
+ad4 = Pin("D4", Pin.OUT, value=0)
 def status_cb(status):
     print("m stat: {:02x}".format(status))
 
@@ -63,11 +63,19 @@ while 1 != 0:
               print(command_name)
               print(kwargs)
               if "attributes" in kwargs:
-                  payload = bytes([12, 30, 16, seq, 1])
-                  payload = payload + bytes([0, 0, 16, ad4.value()])
-                  # payload= attr_bytes
-                  print(payload)
-                  com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
+                  if kwargs['attributes'][0] == 0:
+                    payload = bytes([12, 30, 16, seq, 1]) #zcl_header
+                    payload = payload + bytes([0, 0, 0,16, ad4.value()])
+                    # payload= attr_bytes
+                    print(payload)
+                    com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
+                                     cluster=packet['cluster'], profile=packet['profile'])
+                  if kwargs['attributes'][0] == 10:
+                    payload = bytes([12, 30, 16, seq, 1])
+                    payload = payload + bytes([0, 0, 16, ad4.value()])
+                    # payload= attr_bytes
+                    print(payload)
+                    com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
                                  cluster=packet['cluster'], profile=packet['profile'])
               if command_name == "on":
                   ad4.value(1)
@@ -129,10 +137,13 @@ while 1 != 0:
     if (diff < time.ticks_diff(time.ticks_ms(), timestamp)) or ( not first_report )  :
         timestamp = time.ticks_ms()
         first_report = True
-        zcl_head = bytes([12, 30, 16, 171, 10])    
-        payload = zcl_head + bytes([0,0,10,0]) #for now only return off for state report
+        zcl_head = bytes([12, 30, 16, 171, 5])  # zcl_header
+        payload =  bytes([0, 0, 0, 16, ad4.value()])
+        payload = zcl_head + payload
         com.fancy_transmit(payload=payload, source_ep=8, dest_ep=1, cluster=6, profile=260)
-    garage.watch()
+    if garage.watch():
+        zcl_head = bytes([12, 30, 16, 171, 5])  # zcl_header
+
 
 #print(xbee.receive())
 #print("temperature")
