@@ -22,20 +22,17 @@ def status_cb(status):
 xbee.modem_status.callback(status_cb)
 # arduino_addr = 0x48
 # senddata = 0
-xbee.atcmd('KY',b'\x5A\x69\x67\x42\x65\x65\x41\x6C\x6C\x69\x61\x6E\x63\x65\x30\x39')
-srcaddr = int(xbee.atcmd('MY'))
-xbee.atcmd('CN')
-srcarry = srcaddr.to_bytes(2, "big")
+key = b'\x5A\x69\x67\x42\x65\x65\x41\x6C\x6C\x69\x61\x6E\x63\x65\x30\x39'
+xbee.atcmd('KY', key)
 
 
-initial_payload=bytes([171, srcarry[1], srcarry[0], 141, 194, 209, 65, 0, 162, 19, 0, 142])
-leave_load=bytes([171, srcarry[1], srcarry[0], 209, 65, 0, 162, 19, 0, 2])
+#leave_load=bytes([171, srcarry[1], srcarry[0], 209, 65, 0, 162, 19, 0, 2])
 #xbee.transmit(xbee.ADDR_COORDINATOR, b'\xAB\xF7\x6A\x8D\xC2\xD1\x41\x00\xA2\x13\x00\x8E', source_ep=0, dest_ep=0, cluster=19, profile=0, tx_options=0)
 #xbee.transmit(xbee.ADDR_COORDINATOR, b'\xAB\xF7\x6A\x8D\xC2\xD1\x41\x00\xA2\x13\x00\x8E', source_ep=0, dest_ep=0, cluster=19, profile=0, tx_options=0)
-send=0
+#send=0
+com.announce()
 time.sleep(1)
 
-com.fancy_transmit( payload=initial_payload, source_ep=0, dest_ep=0, cluster=19,profile=0 )
 print("receiving")
 diff = 3600000
 first_report = False
@@ -53,15 +50,14 @@ while 1 != 0:
                 barrier.status(seq,payload)
             if CommandType is not None:
                 barrier.command(payload)
-                barrier.status(seq, payload)
             pass
         if packet['cluster'] == 6: #genOnOffCluster in HA Profile
             if packet['profile'] == 260: #HA profile
               cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(packet['cluster'], packet['payload'])
-              print(packet['payload'])
-              print(CommandType)
-              print(command_name)
-              print(kwargs)
+              # print(packet['payload'])
+              # print(CommandType)
+              # print(command_name)
+              # print(kwargs)
               if "attributes" in kwargs:
                   if kwargs['attributes'][0] == 0:
                     payload = bytes([12, 30, 16, seq, 1]) #zcl_header
@@ -74,7 +70,7 @@ while 1 != 0:
                     payload = bytes([12, 30, 16, seq, 1])
                     payload = payload + bytes([0, 0, 16, ad4.value()])
                     # payload= attr_bytes
-                    print(payload)
+                    #print(payload)
                     com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
                                  cluster=packet['cluster'], profile=packet['profile'])
               if command_name == "on":
@@ -134,15 +130,20 @@ while 1 != 0:
             print("Node descriptor response integer payload discard")
         #for key, value in packet.items():
         #1  print (key, ' : ', value)
-    if (diff < time.ticks_diff(time.ticks_ms(), timestamp)) or ( not first_report )  :
+    if (diff < time.ticks_diff(time.ticks_ms(), timestamp)) or (not first_report):
         timestamp = time.ticks_ms()
         first_report = True
-        zcl_head = bytes([12, 30, 16, 171, 5])  # zcl_header
-        payload =  bytes([0, 0, 0, 16, ad4.value()])
-        payload = zcl_head + payload
-        com.fancy_transmit(payload=payload, source_ep=8, dest_ep=1, cluster=6, profile=260)
+        #payload = bytes([12, 30, 16, 171, 5,0, 0, 0, 16, ad4.value()])  # zcl_header
+        #payload =  bytes([])
+        #payload = zcl_head# + payload
+        com.fancy_transmit(payload=bytes([12, 30, 16, 171, 5,0, 0, 0, 16, ad4.value()]), source_ep=8, dest_ep=1, cluster=6, profile=260)
+        com.fancy_transmit(payload=bytes([12, 30, 16, 171,5])+garage.status(), source_ep=8, dest_ep=1, cluster=259, profile=260)
     if garage.watch():
         zcl_head = bytes([12, 30, 16, 171, 5])  # zcl_header
+        print("door: "+ str(garage.door))
+        print("motor: "+ str(garage.motor))
+        time.sleep(1)
+        garage.update = False
 
 
 #print(xbee.receive())

@@ -447,16 +447,16 @@ DATATYPES_BY_NAME = {
 #  return cluster, data
 
 
-PROFILE_COMMANDS_BY_NAME = {
+_PROFILE_COMMANDS_BY_NAME = {
   # ZCL Spec -- "2.5 General Command Frames"
   'read_attributes': (0x00, ('attributes:*uint16',),),
   'read_attributes_response': (0x01, ('attributes:%read_attr_status',),),
   'write_attributes': (0x02, ('a:*write_attr',),),
   'write_attributes_undivided': (0x03, ('a:*write_attr',),),
-  'write_attributes_response': (0x04, ('*a:write_attr_status',),),
-  'write_attributes_no_response': (0x05, ('a:*write_attr',),),
-  'configure_reporting': (0x06, ('configs:*attr_reporting_config',),),
-  'configure_reporting_response': (0x07, ('results:%attr_reporting_status',),),
+  #'write_attributes_response': (0x04, ('*a:write_attr_status',),),
+  #'write_attributes_no_response': (0x05, ('a:*write_attr',),),
+  #'configure_reporting': (0x06, ('configs:*attr_reporting_config',),),
+  #'configure_reporting_response': (0x07, ('results:%attr_reporting_status',),),
   # 'read_reporting_configuration': (0x08, (),),
   # 'read_reporting_configuration_response': (0x09, (),),
   'report_attributes': (0x0a, ('attributes:%reported_attribute',),),
@@ -470,11 +470,11 @@ PROFILE_COMMANDS_BY_NAME = {
 
 
 PROFILE_COMMANDS_BY_ID = {
-  command: (command_name, args) for command_name, (command, args) in PROFILE_COMMANDS_BY_NAME.items()
+  command: (command_name, args) for command_name, (command, args) in _PROFILE_COMMANDS_BY_NAME.items()
 }
 
 
-CLUSTERS_BY_NAME = {
+_CLUSTERS_BY_NAME = {
   # ZCL Spec -- Chapter 3 -- General
   'basic': (0x0000, {
     'reset': (0x00, (),),
@@ -607,7 +607,7 @@ CLUSTERS_BY_NAME = {
 
 
 CLUSTERS_BY_ID = {}
-for cluster_name, (cluster, rx_commands, tx_commands, attributes,) in CLUSTERS_BY_NAME.items():
+for cluster_name, (cluster, rx_commands, tx_commands, attributes,) in _CLUSTERS_BY_NAME.items():
   CLUSTERS_BY_ID[cluster] = (
     cluster_name,
     {
@@ -682,18 +682,18 @@ def return_attributes(cluster, data):
 
 
 def get_cluster_by_name(cluster_name):
-  if cluster_name not in CLUSTERS_BY_NAME:
+  if cluster_name not in _CLUSTERS_BY_NAME:
     raise ValueError('Unknown cluster "{}"'.format(cluster_name))
 
-  cluster, _rx_commands, _tx_commands, _attributes = CLUSTERS_BY_NAME[cluster_name]
+  cluster, _rx_commands, _tx_commands, _attributes = _CLUSTERS_BY_NAME[cluster_name]
   return cluster
 
 
 def get_cluster_rx_command(cluster_name, command_name):
-  if cluster_name not in CLUSTERS_BY_NAME:
+  if cluster_name not in _CLUSTERS_BY_NAME:
     raise ValueError('Unknown cluster "{}"'.format(cluster_name))
 
-  cluster, rx_commands, _tx_commands, _attributes = CLUSTERS_BY_NAME[cluster_name]
+  cluster, rx_commands, _tx_commands, _attributes = _CLUSTERS_BY_NAME[cluster_name]
 
   if command_name not in rx_commands:
     raise ValueError('Unknown command "{}"'.format(command_name))
