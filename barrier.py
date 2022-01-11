@@ -1,3 +1,5 @@
+import time
+
 import com
 import xbee
 from machine import Pin
@@ -23,7 +25,10 @@ class Barrier:
 
 
     def command(self, seq, payload):
-        pass
+        self.ad4.value(1)
+        time.sleep_ms(600)
+        self.ad4.value(0)
+        #should probably respond if there's a request for it
 
     def watch(self):
         current_door = self.door
