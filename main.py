@@ -49,7 +49,7 @@ while 1 != 0:
             if "attributes" in kwargs:
                 barrier.status(seq,payload)
             if CommandType is not None:
-                barrier.command(payload)
+                barrier.command(seq, payload)
             pass
         if packet['cluster'] == 6: #genOnOffCluster in HA Profile
             if packet['profile'] == 260: #HA profile
@@ -130,8 +130,10 @@ while 1 != 0:
         #payload = bytes([12, 30, 16, 171, 5,0, 0, 0, 16, ad4.value()])  # zcl_header
         #payload =  bytes([])
         #payload = zcl_head# + payload
+        florp = garage.status(None, None)
+        dumb = bytes([12, 30, 16, 171, 5])
         com.fancy_transmit(payload=bytes([12, 30, 16, 171, 5,0, 0, 0, 16, ad4.value()]), source_ep=8, dest_ep=1, cluster=6, profile=260)
-        com.fancy_transmit(payload=bytes([12, 30, 16, 171,5])+garage.status(), source_ep=8, dest_ep=1, cluster=259, profile=260)
+        com.fancy_transmit(payload=dumb , source_ep=8, dest_ep=1, cluster=259, profile=260)
     if garage.watch():
         zcl_head = bytes([12, 30, 16, 171, 5])  # zcl_header
         print("door: "+ str(garage.door))

@@ -21,14 +21,15 @@ class Barrier:
         # 2 octets attribute identifier
         # 1 octet attribute data type
         # 1 octet attribute value
-        return bytes([1,0,32,self.moving,10,0,20,self.barrier_position])
+        to_return = bytes([1,0,32]) + bytes(self.moving) +bytes([10,0,20]) + bytes(self.barrier_position)
+        return to_return
 
 
     def command(self, seq, payload):
         self.ad4.value(1)
         time.sleep_ms(600)
         self.ad4.value(0)
-        #should probably respond if there's a request for it
+
 
     def watch(self):
         current_door = self.door
