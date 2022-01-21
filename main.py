@@ -47,9 +47,9 @@ while 1 != 0:
             cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(
                 packet['cluster'], packet['payload'])
             if "attributes" in kwargs:
-                barrier.status(seq,payload)
+                garage.status(seq,packet['payload'])
             if CommandType is not None:
-                barrier.command(seq, payload)
+                garage.command(seq, packet['payload'])
             pass
         if packet['cluster'] == 6: #genOnOffCluster in HA Profile
             if packet['profile'] == 260: #HA profile
@@ -73,8 +73,14 @@ while 1 != 0:
                     #print(payload)
                     com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
                                  cluster=packet['cluster'], profile=packet['profile'])
-              if command_name == "go_to_percent":
-                garage.command(seq,payload)
+              if command_name == "on":
+                  ad4.value(1)
+              if command_name == "off":
+                  ad4.value(0)
+              if command_name == "toggle":
+                  ad4.value(1)
+                  time.sleep(1)
+                  ad4.value(0)
         if packet['cluster']==5: #active endpoint request
             print(bytes(packet['payload']))
             b = bytearray(packet['payload'])
