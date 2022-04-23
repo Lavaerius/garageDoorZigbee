@@ -15,14 +15,27 @@ class Barrier:
     motor = ad1.value().to_bytes(2, "big")
     update = True
 
-    def status(self, seq, payload):
+    def status(self,seq, kwargs):
         #moving state is x0001 enum8(0x30)
         #Barrierposition is 0x000A uint8(0x20)
         # 2 octets attribute identifier
         # 1 octet attribute data type
         # 1 octet attribute value
-        to_return = bytes([1,0,32]) + bytes(self.moving) +bytes([10,0,20]) + bytes(self.barrier_position)
-        return to_return
+        print("really messed up early in the game eh")
+        attributes = kwargs['attributes']
+        print(attributes)
+        if len(attributes) == 1:
+            print("length")
+            if attributes[0] == 10:
+                print("position request")
+                print(self.barrier_position)
+                return self.barrier_position
+            if attributes[0] == 1:
+                print("moving request")
+                print(self.moving)
+                return self.moving
+        #to_return = bytes([1,0,48]) + bytes(self.moving) + bytes([10,0,20]) + bytes(self.barrier_position)
+        return -1
 
 
     def command(self, seq, payload):

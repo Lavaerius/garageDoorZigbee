@@ -15,6 +15,8 @@ import struct
 #ad0 = Pin("D0", Pin.IN, Pin.PULL_UP)
 #ad1 = Pin("D1", Pin.IN, Pin.PULL_UP)
 #ad2 = Pin("D2", Pin.IN, Pin.PULL_UP)
+while xbee.atcmd("AI") != 0:
+  time.sleep(0.1)
 ad4 = Pin("D4", Pin.OUT, value=0)
 def status_cb(status):
     print("m stat: {:02x}".format(status))
@@ -43,11 +45,21 @@ while 1 != 0:
     packet = com.receive()
     if packet is not None:
         print(packet)
+        b = bytearray(packet['payload'])
+        print(b[0])
         if packet['cluster'] == 259:  #barrier cluster
             cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(
                 packet['cluster'], packet['payload'])
             if "attributes" in kwargs:
-                garage.status(seq,packet['payload'])
+                #garage.status(seq,packet['payload'])
+                print("found attribute request")
+                stat=garage.status(seq, kwargs)
+                if payload != -1:
+                    print("garage status")
+                    print(payload)
+                    payload =  bytes([12, 30, 16, seq, 1])
+                    payload = payload + bytes([0, 0, 16,stat ])
+                    com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
             if CommandType is not None:
                 garage.command(seq, packet['payload'])
             pass
@@ -87,12 +99,16 @@ while 1 != 0:
             print(b[0])
             payload=bytes([b[0], 00, b[1], b[2], 1, 8])
             com.fancy_transmit(payload=payload,source_ep=0,dest_ep=0,cluster=32773, profile=0)
+            #payload = bytes([b[0], 00, b[1], b[2], 1, 16])
+            #time.sleep(0.5)
+            #com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32773, profile=0)
             print("sent-endpoint-response")
         if packet['cluster']==4: #simple descriptor request
             print(bytes(packet['payload']))
             b = bytearray(packet['payload'])
             print(b[0])
-            payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 4, 0, 0, 3, 0, 6, 3, 1,0, 0])
+            #payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 3, 0, 0, 3, 0, 6, 0, 0])
+            payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 4, 0, 0, 3, 0, 6,0, 3, 1,0, 0])
             com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=0)
             print("simple descriptor response")
 
@@ -136,14 +152,17 @@ while 1 != 0:
         #payload = bytes([12, 30, 16, 171, 5,0, 0, 0, 16, ad4.value()])  # zcl_header
         #payload =  bytes([])
         #payload = zcl_head# + payload
-        florp = garage.status(None, None)
+        garage.watch()
+        florp = garage.barrier_position
         dumb = bytes([12, 30, 16, 171, 5])
-        com.fancy_transmit(payload=bytes([12, 30, 16, 171, 5,0, 0, 0, 16, ad4.value()]), source_ep=8, dest_ep=1, cluster=6, profile=260)
+        com.fancy_transmit(payload=bytes([12, 30, 16, 171, 10])+florp, source_ep=8, dest_ep=1, cluster=6, profile=260)
         com.fancy_transmit(payload=dumb , source_ep=8, dest_ep=1, cluster=259, profile=260)
     if garage.watch():
-        zcl_head = bytes([12, 30, 16, 171, 5])  # zcl_header
+        zcl_head = bytes([12, 30, 16, 171, 10])  # zcl_header
+        payl = zcl_head + garage.status()
         print("door: "+ str(garage.door))
         print("motor: "+ str(garage.motor))
+        com.fancy_transmit(payload=payl, source_ep=8, dest_ep=1, cluster=259, profile=260)
         time.sleep(1)
         garage.update = False
 
