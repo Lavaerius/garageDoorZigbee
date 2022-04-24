@@ -3,7 +3,7 @@ import time
 import com
 import xbee
 from machine import Pin
-
+from micropython import const
 
 class Barrier:
     moving = b'\x00'
@@ -14,6 +14,10 @@ class Barrier:
     door = ad0.value().to_bytes(2,"big")
     motor = ad1.value().to_bytes(2, "big")
     update = True
+    duint8 = const(0x20)
+    _duint16 = const(0x21)
+    denum8 = const(0x30)
+    _dbool = const(0x10)
 
     def status(self,seq, kwargs):
         #moving state is x0001 enum8(0x30)
@@ -21,21 +25,14 @@ class Barrier:
         # 2 octets attribute identifier
         # 1 octet attribute data type
         # 1 octet attribute value
-        print("really messed up early in the game eh")
         attributes = kwargs['attributes']
-        print(attributes)
         if len(attributes) == 1:
-            print("length")
             if attributes[0] == 10:
-                print("position request")
-                print(self.barrier_position)
-                return self.barrier_position
+                return bytes([0,10]) + bytes([self.duint8]) + self.barrier_position
             if attributes[0] == 1:
-                print("moving request")
-                print(self.moving)
-                return self.moving
+                return bytes([0,0]) + bytes([self.denum8]) + self.moving
         #to_return = bytes([1,0,48]) + bytes(self.moving) + bytes([10,0,20]) + bytes(self.barrier_position)
-        return -1
+        return b'\xFFFF'
 
 
     def command(self, seq, payload):

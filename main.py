@@ -4,17 +4,16 @@
 import time
 import xbee
 import spec
-import ubinascii
-from machine import I2C
 import barrier
 from machine import Pin
 import gen
 import com
+from micropython import const
 import struct
 
 #ad0 = Pin("D0", Pin.IN, Pin.PULL_UP)
 #ad1 = Pin("D1", Pin.IN, Pin.PULL_UP)
-#ad2 = Pin("D2", Pin.IN, Pin.PULL_UP)
+#ad2 = Pin("D2", Pin.IN, Pin.PULL_UP)help
 while xbee.atcmd("AI") != 0:
   time.sleep(0.1)
 ad4 = Pin("D4", Pin.OUT, value=0)
@@ -25,6 +24,7 @@ xbee.modem_status.callback(status_cb)
 # arduino_addr = 0x48
 # senddata = 0
 key = b'\x5A\x69\x67\x42\x65\x65\x41\x6C\x6C\x69\x61\x6E\x63\x65\x30\x39'
+#_key = const(0x5A 0x69 0x67 0x42 0x65 0x65 0x41 0x6C 0x6C 0x69 0x61 0x6E 0x63 0x65 0x30 0x39)
 xbee.atcmd('KY', key)
 
 
@@ -40,7 +40,17 @@ diff = 3600000
 first_report = False
 timestamp = time.ticks_ms()
 garage = barrier.Barrier()
-
+payload_header=b'\x0c\x1e\x10'
+_rap=const(0x01) #read attribute response
+_dap=const(0x0d) #discover attribute response
+_war=const(0x05) #write attribute no response
+_ra =const(0x0a)  #report attributes
+oob=b'\xab' #out of band sequence number
+duint8 = b'\x20'
+duint16 =b'\x21'
+denum8 = b'\x30'
+dbool =  b'\x10'
+SUCCESS = b'\x00'
 while 1 != 0:
     packet = com.receive()
     if packet is not None:
@@ -50,17 +60,19 @@ while 1 != 0:
         if packet['cluster'] == 259:  #barrier cluster
             cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(
                 packet['cluster'], packet['payload'])
+            print("printing kwargs for incoming packet")
+            print(command_name)
             if "attributes" in kwargs:
                 #garage.status(seq,packet['payload'])
                 print("found attribute request")
                 stat=garage.status(seq, kwargs)
-                if payload != -1:
+                if stat != 'b\xffff':
                     print("garage status")
+                    payload = payload_header+ bytes([seq])+ bytes([_rap]) + stat
                     print(payload)
-                    payload =  bytes([12, 30, 16, seq, 1])
-                    payload = payload + bytes([0, 0, 16,stat ])
                     com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
-            if CommandType is not None:
+            #if CommandType is not None:
+            if command_name == "stop":
                 garage.command(seq, packet['payload'])
             pass
         if packet['cluster'] == 6: #genOnOffCluster in HA Profile
@@ -72,17 +84,14 @@ while 1 != 0:
               # print(kwargs)
               if "attributes" in kwargs:
                   if kwargs['attributes'][0] == 0:
-                    payload = bytes([12, 30, 16, seq, 1]) #zcl_header
-                    payload = payload + bytes([0, 0, 0,16, ad4.value()])
-                    # payload= attr_bytes
+                    payload = payload_header + bytes([seq]) + bytes([_rap]) + bytes([0,0])+ SUCCESS + dbool + bytes([ad4.value()])
                     print(payload)
                     com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
                                      cluster=packet['cluster'], profile=packet['profile'])
                   if kwargs['attributes'][0] == 10:
-                    payload = bytes([12, 30, 16, seq, 1])
-                    payload = payload + bytes([0, 0, 16, ad4.value()])
+                    payload = payload_header + bytes([seq]) + _rap + bytes([0, 0, 16, ad4.value()])
                     # payload= attr_bytes
-                    #print(payload)
+                    print(payload)
                     com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
                                  cluster=packet['cluster'], profile=packet['profile'])
               if command_name == "on":
@@ -122,8 +131,8 @@ while 1 != 0:
                 attr_bytes=gen.attribute_result(kwargs)
                 #payload: control byte, code bytes(2), seq copy, command identifier(read_attributes_response,
                 #payload = bytes([4, 30, 16, seq, 1, attr_bytes, 0, 8, 0])
-                payload = bytes([12, 30, 16, seq, 1])
-                payload = payload+attr_bytes
+                zcl_header = payload_header + bytes([seq]) + _rap
+                payload = zcl_header+attr_bytes
                 #payload= attr_bytes
                 print(payload)
                 com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
@@ -154,9 +163,11 @@ while 1 != 0:
         #payload = zcl_head# + payload
         garage.watch()
         florp = garage.barrier_position
-        dumb = bytes([12, 30, 16, 171, 5])
+        zcl_header = payload_header +oob + bytes([_ra])
+        payload=zcl_header+bytes([5])
+        #dumb = bytes([12, 30, 16, 171, 5])
         com.fancy_transmit(payload=bytes([12, 30, 16, 171, 10])+florp, source_ep=8, dest_ep=1, cluster=6, profile=260)
-        com.fancy_transmit(payload=dumb , source_ep=8, dest_ep=1, cluster=259, profile=260)
+        com.fancy_transmit(payload=payload , source_ep=8, dest_ep=1, cluster=259, profile=260)
     if garage.watch():
         zcl_head = bytes([12, 30, 16, 171, 10])  # zcl_header
         payl = zcl_head + garage.status()
