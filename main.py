@@ -40,7 +40,9 @@ diff = 3600000
 first_report = False
 timestamp = time.ticks_ms()
 garage = barrier.Barrier()
-payload_header=b'\x0c\x1e\x10'
+payload_header=b'\x18'
+war_header=b'\x10'
+#payload_header=b'\x0c\x1e\x10'
 _rap=const(0x01) #read attribute response
 _dap=const(0x0d) #discover attribute response
 _war=const(0x05) #write attribute no response
@@ -89,7 +91,7 @@ while 1 != 0:
                     com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
                                      cluster=packet['cluster'], profile=packet['profile'])
                   if kwargs['attributes'][0] == 10:
-                    payload = payload_header + bytes([seq]) + _rap + bytes([0, 0, 16, ad4.value()])
+                    payload = payload_header + bytes([seq]) + bytes([_rap]) + bytes([0, 0, 16, ad4.value()])
                     # payload= attr_bytes
                     print(payload)
                     com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
@@ -162,17 +164,18 @@ while 1 != 0:
         #payload =  bytes([])
         #payload = zcl_head# + payload
         garage.watch()
-        florp = garage.barrier_position
-        zcl_header = payload_header +oob + bytes([_ra])
-        payload=zcl_header+bytes([5])
+        zcl_header = war_header +oob + bytes([_war])
+        payload=zcl_header+garage.position()
         #dumb = bytes([12, 30, 16, 171, 5])
-        com.fancy_transmit(payload=bytes([12, 30, 16, 171, 10])+florp, source_ep=8, dest_ep=1, cluster=6, profile=260)
+        #com.fancy_transmit(payload=bytes([12, 30, 16, 171, 10])+florp, source_ep=8, dest_ep=1, cluster=6, profile=260)
         com.fancy_transmit(payload=payload , source_ep=8, dest_ep=1, cluster=259, profile=260)
     if garage.watch():
-        zcl_head = bytes([12, 30, 16, 171, 10])  # zcl_header
-        payl = zcl_head + garage.status()
+
+        #payload_header + oob + bytes([_war])
+        payl = war_header + oob + bytes([_war]) + garage.position()
         print("door: "+ str(garage.door))
         print("motor: "+ str(garage.motor))
+        print(payl)
         com.fancy_transmit(payload=payl, source_ep=8, dest_ep=1, cluster=259, profile=260)
         time.sleep(1)
         garage.update = False

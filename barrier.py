@@ -28,13 +28,14 @@ class Barrier:
         attributes = kwargs['attributes']
         if len(attributes) == 1:
             if attributes[0] == 10:
-                return bytes([0,10]) + bytes([self.duint8]) + self.barrier_position
+                return bytes([0,10]) + b'\x00' + bytes([self.duint8]) + self.barrier_position
             if attributes[0] == 1:
-                return bytes([0,0]) + bytes([self.denum8]) + self.moving
+                return bytes([0,1]) + b'\x00' + bytes([self.denum8]) + self.moving
         #to_return = bytes([1,0,48]) + bytes(self.moving) + bytes([10,0,20]) + bytes(self.barrier_position)
         return b'\xFFFF'
 
-
+    def position (self):
+        return  bytes([0,10])+bytes([self.duint8]) + self.barrier_position
     def command(self, seq, payload):
         self.ad4.value(1)
         time.sleep_ms(600)
