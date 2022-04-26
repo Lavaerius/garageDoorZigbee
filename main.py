@@ -36,12 +36,8 @@ com.announce()
 time.sleep(1)
 
 print("receiving")
-diff = 3600000
-first_report = False
-timestamp = time.ticks_ms()
-garage = barrier.Barrier()
-payload_header=b'\x18'
-war_header=b'\x10'
+
+#war_header=b'\x10'
 #payload_header=b'\x0c\x1e\x10'
 _rap=const(0x01) #read attribute response
 _dap=const(0x0d) #discover attribute response
@@ -53,134 +49,139 @@ duint16 =b'\x21'
 denum8 = b'\x30'
 dbool =  b'\x10'
 SUCCESS = b'\x00'
-while 1 != 0:
-    packet = com.receive()
-    if packet is not None:
-        print(packet)
-        b = bytearray(packet['payload'])
-        print(b[0])
-        if packet['cluster'] == 259:  #barrier cluster
-            cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(
-                packet['cluster'], packet['payload'])
-            print("printing kwargs for incoming packet")
-            print(command_name)
-            if "attributes" in kwargs:
-                #garage.status(seq,packet['payload'])
-                print("found attribute request")
-                stat=garage.status(seq, kwargs)
-                if stat != 'b\xffff':
-                    print("garage status")
-                    payload = payload_header+ bytes([seq])+ bytes([_rap]) + stat
-                    print(payload)
-                    com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
-            #if CommandType is not None:
-            if command_name == "stop":
-                garage.command(seq, packet['payload'])
-            pass
-        if packet['cluster'] == 6: #genOnOffCluster in HA Profile
-            if packet['profile'] == 260: #HA profile
-              cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(packet['cluster'], packet['payload'])
-              # print(packet['payload'])
-              # print(CommandType)
-              # print(command_name)
-              # print(kwargs)
-              if "attributes" in kwargs:
-                  if kwargs['attributes'][0] == 0:
-                    payload = payload_header + bytes([seq]) + bytes([_rap]) + bytes([0,0])+ SUCCESS + dbool + bytes([ad4.value()])
-                    print(payload)
-                    com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
-                                     cluster=packet['cluster'], profile=packet['profile'])
-                  if kwargs['attributes'][0] == 10:
-                    payload = payload_header + bytes([seq]) + bytes([_rap]) + bytes([0, 0, 16, ad4.value()])
-                    # payload= attr_bytes
-                    print(payload)
-                    com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
-                                 cluster=packet['cluster'], profile=packet['profile'])
-              if command_name == "on":
-                  ad4.value(1)
-              if command_name == "off":
-                  ad4.value(0)
-              if command_name == "toggle":
-                  ad4.value(1)
-                  time.sleep(1)
-                  ad4.value(0)
-        if packet['cluster']==5: #active endpoint request
-            print(bytes(packet['payload']))
-            b = bytearray(packet['payload'])
-            print(b[0])
-            payload=bytes([b[0], 00, b[1], b[2], 1, 8])
-            com.fancy_transmit(payload=payload,source_ep=0,dest_ep=0,cluster=32773, profile=0)
-            #payload = bytes([b[0], 00, b[1], b[2], 1, 16])
-            #time.sleep(0.5)
-            #com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32773, profile=0)
-            print("sent-endpoint-response")
-        if packet['cluster']==4: #simple descriptor request
-            print(bytes(packet['payload']))
-            b = bytearray(packet['payload'])
-            print(b[0])
-            #payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 3, 0, 0, 3, 0, 6, 0, 0])
-            payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 4, 0, 0, 3, 0, 6,0, 3, 1,0, 0])
-            com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=0)
-            print("simple descriptor response")
 
-        if packet['cluster'] == 0: #network address request
-            if packet['profile'] == 260:
-              #resp = bytearray(packet['payload'])
-              cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(packet['cluster'], packet['payload'])
+def main_loop ():
+  diff = 10000
+  first_report = False
+  timestamp = time.ticks_ms()
+  garage = barrier.Barrier()
+  payload_header = b'\x18'
+  while 1 != 0:
+      packet = com.receive()
+      if packet is not None:
+          print(packet)
+          b = bytearray(packet['payload'])
+          print(b[0])
+          if packet['cluster'] == 259:  #barrier cluster
+              cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(
+                  packet['cluster'], packet['payload'])
+              print("printing kwargs for incoming packet")
               print(command_name)
-              print(kwargs)
-              if 'attributes' in kwargs:
-                attr_bytes=gen.attribute_result(kwargs)
-                #payload: control byte, code bytes(2), seq copy, command identifier(read_attributes_response,
-                #payload = bytes([4, 30, 16, seq, 1, attr_bytes, 0, 8, 0])
-                zcl_header = payload_header + bytes([seq]) + _rap
-                payload = zcl_header+attr_bytes
-                #payload= attr_bytes
-                print(payload)
-                com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
-              print("attribute_read_response")
-              #spec.decode_zcl(packet['cluster'], packet['payload'])
-            print(bytes(packet['payload']))
-            b = bytearray(packet['payload'])
-            for x in b:
-                print(x)
-        if packet['cluster'] == 2: #node descriptor request
-            print(bytes(packet['payload']))
-            b = bytearray(packet['payload'])
-            print(b[0])
-            payload = bytes([b[0], 00, b[1], b[2], 4, 143, 120, 8, 80, 160, 0, 1, 44, 160, 0, 0])
-            com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=packet['profile'])
-            print("node descriptor response")
-        if packet['cluster'] == 32770: #node descriptor response
-            print(bytes(packet['payload']))
-            b = bytearray(packet['payload'])
-            print("Node descriptor response integer payload discard")
-        #for key, value in packet.items():
-        #1  print (key, ' : ', value)
-    if (diff < time.ticks_diff(time.ticks_ms(), timestamp)) or (not first_report):
-        timestamp = time.ticks_ms()
-        first_report = True
-        #payload = bytes([12, 30, 16, 171, 5,0, 0, 0, 16, ad4.value()])  # zcl_header
-        #payload =  bytes([])
-        #payload = zcl_head# + payload
-        garage.watch()
-        zcl_header = war_header +oob + bytes([_war])
-        payload=zcl_header+garage.position()
-        #dumb = bytes([12, 30, 16, 171, 5])
-        #com.fancy_transmit(payload=bytes([12, 30, 16, 171, 10])+florp, source_ep=8, dest_ep=1, cluster=6, profile=260)
-        com.fancy_transmit(payload=payload , source_ep=8, dest_ep=1, cluster=259, profile=260)
-    if garage.watch():
+              if "attributes" in kwargs:
+                  #garage.status(seq,packet['payload'])
+                  print("found attribute request")
+                  stat=garage.status(seq, kwargs)
+                  if stat != 'b\xffff':
+                      print("garage status")
+                      payload = payload_header+ bytes([seq])+ bytes([_rap]) + stat
+                      print(payload)
+                      com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
+              #if CommandType is not None:
+              if command_name == "stop":
+                  garage.command(seq, packet['payload'])
+              pass
+          if packet['cluster'] == 6: #genOnOffCluster in HA Profile
+              if packet['profile'] == 260: #HA profile
+                cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(packet['cluster'], packet['payload'])
+                # print(packet['payload'])
+                # print(CommandType)
+                # print(command_name)
+                # print(kwargs)
+                if "attributes" in kwargs:
+                    if kwargs['attributes'][0] == 0:
+                      payload = payload_header + bytes([seq]) + bytes([_rap]) + bytes([0,0])+ SUCCESS + dbool + bytes([ad4.value()])
+                      print(payload)
+                      com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
+                                       cluster=packet['cluster'], profile=packet['profile'])
+                    if kwargs['attributes'][0] == 10:
+                      payload = payload_header + bytes([seq]) + bytes([_rap]) + bytes([0, 0, 16, ad4.value()])
+                      print(payload)
+                      com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'],
+                                   cluster=packet['cluster'], profile=packet['profile'])
+                if command_name == "on":
+                    ad4.value(1)
+                if command_name == "off":
+                    ad4.value(0)
+                if command_name == "toggle":
+                    ad4.value(1)
+                    time.sleep(1)
+                    ad4.value(0)
+          if packet['cluster']==5: #active endpoint request
+              print(bytes(packet['payload']))
+              b = bytearray(packet['payload'])
+              print(b[0])
+              payload=bytes([b[0], 00, b[1], b[2], 1, 8])
+              com.fancy_transmit(payload=payload,source_ep=0,dest_ep=0,cluster=32773, profile=0)
+              print("sent-endpoint-response")
+          if packet['cluster']==4: #simple descriptor request
+              print(bytes(packet['payload']))
+              b = bytearray(packet['payload'])
+              print(b[0])
+              payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 4, 0, 0, 3, 0, 6,0, 3, 1,0, 0])
+              com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=0)
+              print("simple descriptor response")
 
-        #payload_header + oob + bytes([_war])
-        payl = war_header + oob + bytes([_war]) + garage.position()
-        print("door: "+ str(garage.door))
-        print("motor: "+ str(garage.motor))
-        print(payl)
-        com.fancy_transmit(payload=payl, source_ep=8, dest_ep=1, cluster=259, profile=260)
-        time.sleep(1)
-        garage.update = False
+          if packet['cluster'] == 0: #network address request
+              if packet['profile'] == 260:
+                cluster_name, seq, CommandType, command_name, disable_default_response, kwargs = spec.decode_zcl(packet['cluster'], packet['payload'])
+                print(command_name)
+                print(kwargs)
+                if 'attributes' in kwargs:
+                  attr_bytes=gen.attribute_result(kwargs)
+                  zcl_header = payload_header + bytes([seq]) + _rap
+                  payload = zcl_header+attr_bytes
+                  print(payload)
+                  com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
+                print("attribute_read_response")
+                #spec.decode_zcl(packet['cluster'], packet['payload'])
+              print(bytes(packet['payload']))
+              b = bytearray(packet['payload'])
+              for x in b:
+                  print(x)
+          if packet['cluster'] == 2: #node descriptor request
+              print(bytes(packet['payload']))
+              b = bytearray(packet['payload'])
+              print(b[0])
+              payload = bytes([b[0], 00, b[1], b[2], 4, 143, 120, 8, 80, 160, 0, 1, 44, 160, 0, 0])
+              com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=packet['profile'])
+              print("node descriptor response")
+          if packet['cluster'] == 32770: #node descriptor response
+              print(bytes(packet['payload']))
+              b = bytearray(packet['payload'])
+              print("Node descriptor response integer payload discard")
+          #for key, value in packet.items():
+          #1  print (key, ' : ', value)
+          #print(time.ticks_diff(time.ticks_ms(),timestamp))
+      if (diff < time.ticks_diff(time.ticks_ms(), timestamp)) or (not first_report):
+          timestamp = time.ticks_ms()
+          first_report = True
+          #payload = bytes([12, 30, 16, 171, 5,0, 0, 0, 16, ad4.value()])  # zcl_header
+          #payload =  bytes([])
+          #payload = zcl_head# + payload
+          garage.watch()
+          zcl_header = payload_header + oob + bytes([_ra])
+          payload=zcl_header+garage.position()+garage.movement()
+          #dumb = bytes([12, 30, 16, 171, 5])
+          #com.fancy_transmit(payload=bytes([12, 30, 16, 171, 10])+florp, source_ep=8, dest_ep=1, cluster=6, profile=260)
+          com.fancy_transmit(payload=payload , source_ep=8, dest_ep=1, cluster=259, profile=260)
+      if garage.watch():
+          #payload_header + oob + bytes([_war])
+          payl = payload_header + oob + bytes([_ra]) + garage.position()+ garage.movement()
+          print("door: "+ str(garage.door))
+          print("motor: "+ str(garage.motor))
+          print("moving: "+ str(garage.moving))
+          print("barrierPosition: "+ str(garage.barrier_position))
+          print(payl)
+          com.fancy_transmit(payload=payl, source_ep=8, dest_ep=1, cluster=259, profile=260)
+          time.sleep(1)
+          garage.update = False
 
 
+while 1 != 0:
+  try:
+      main_loop()
+  except Exception as e:
+      print(str(e))
 #print(xbee.receive())
 #print("temperature")
 #print(tp)

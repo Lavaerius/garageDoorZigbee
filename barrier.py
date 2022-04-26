@@ -36,6 +36,9 @@ class Barrier:
 
     def position (self):
         return  bytes([0,10])+bytes([self.duint8]) + self.barrier_position
+
+    def movement (self):
+        return  bytes([0,1]) + bytes([self.denum8]) + self.moving
     def command(self, seq, payload):
         self.ad4.value(1)
         time.sleep_ms(600)
@@ -45,8 +48,8 @@ class Barrier:
     def watch(self):
         current_door = self.door
         current_motor = self.motor
-        self.door = self.ad0.value().to_bytes(2, "big")
-        self.motor = self.ad1.value().to_bytes(2, "big")
+        self.door = self.ad0.value().to_bytes(1, "big")
+        self.motor = self.ad1.value().to_bytes(1, "big")
         #print("door: "+str(self.door))
         #print("motor:" +str(self.motor))
         if (current_door != self.door) or (current_motor != self.motor):
@@ -61,8 +64,8 @@ class Barrier:
             if self.door == b'\x01':
                 self.moving = b'\x00'
                 self.barrier_position = b'\x00'
-        if self.motor == b'\x00':
-            if self.door == b'\x00':
+        if self.motor == b'\x01':
+            if self.door == b'\x01':
                 if self.barrier_position == b'\x64':
                     self.barrier_position = b'\x32'
                     self.moving = b'\x01'
