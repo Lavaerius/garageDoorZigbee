@@ -10,6 +10,22 @@ const e = exposes.presets;
 const ea = exposes.access;
 
 
+class Barrier extends Base {
+  constructor() {
+	  super ()
+	  this.type = 'barrier';
+	  this.features = [];
+  }
+  barrierPosition() {
+	this.features.push(new Numeric('position' access.ALL).withValueMin(0).withValueMax(100).withDescription('Barrier Position')
+	return this;
+  }
+  barrierMovement() {
+	this.features.push(new Enum('state', access.ALL), ['OPEN', 'CLOSE', 'AJAR'])
+	return this;
+  }
+
+
 const fzlocal1 = {
     moving_state: {
         cluster: 'barrierControl',
@@ -67,9 +83,16 @@ const tzlocal ={
     key: ['go_to_percent'], 
      convertSet: async (entity, key, value, meta) => {
 
-        await entity.command('barrierControl','go_to_percent',0x64,utils.getOptions(meta.mapped, entity))
+        await entity.command('barrierControl','go_to_percent',0x64,utils.getOptions(meta.mapped, entity));
      },
     },
+    button: {
+    key: ['stop'], 
+     convertSet async (entity, key, value, meta) => {
+	await entity.command('barrierControl', 'stop');
+     }
+    },
+
 };
 
 const definition = {
