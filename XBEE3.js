@@ -10,25 +10,26 @@ const e = exposes.presets;
 const ea = exposes.access;
 
 
-class Barrier extends Base {
+/*class Barrier extends Base {
   constructor() {
-	  super ()
+	  super ();
 	  this.type = 'barrier';
 	  this.features = [];
   }
-  barrierPosition() {
-	this.features.push(new Numeric('position' access.ALL).withValueMin(0).withValueMax(100).withDescription('Barrier Position')
+  withbarrierPosition() {
+	this.features.push(new Numeric('position', access.ALL).withValueMin(0).withValueMax(100).withDescription('Barrier Position'));
 	return this;
   }
-  barrierMovement() {
-	this.features.push(new Enum('state', access.ALL), ['OPEN', 'CLOSE', 'AJAR'])
+  withbarrierMovement() {
+	this.features.push(new Enum('state', access.ALL), ['OPEN', 'CLOSE', 'AJAR']);
 	return this;
   }
-
+}*/
 
 const fzlocal1 = {
     moving_state: {
         cluster: 'barrierControl',
+	key: ['moving_state'],
         type: ['attributeReport','readResponse'],
         convert: (model, msg, publish, options, meta) => {
             const movingState = msg.data['256'];
@@ -80,15 +81,17 @@ const fzlocal1 = {
 //key is the value defined map of k:v for command
 const tzlocal ={
     go_to_percent: {
+    cluster: 'barrierControl',	    
     key: ['go_to_percent'], 
      convertSet: async (entity, key, value, meta) => {
 
         await entity.command('barrierControl','go_to_percent',0x64,utils.getOptions(meta.mapped, entity));
      },
     },
-    button: {
+    barrierControl: {
+    cluster: 'barrierControl',
     key: ['stop'], 
-     convertSet async (entity, key, value, meta) => {
+     convertSet: async (entity, key, value, meta) => {
 	await entity.command('barrierControl', 'stop');
      }
     },
@@ -100,12 +103,15 @@ const definition = {
     model: 'Digi GarageDoor homemade',
     vendor: 'Digi Nathan',
     description: 'Garage door xbee unit it begins',
-    fromZigbee: [fz.on_off, fzlocal1.moving_state, fzlocal1.position],
-    toZigbee: [tz.on_off,tzlocal.go_to_percent],// tzlocal.go_to_percent, tzlocal.stop],
+    fromZigbee: [ fzlocal1.moving_state, fzlocal1.position],
+    toZigbee: [tzlocal.go_to_percent, tzlocal.barrierControl], //, tzlocal.stop],// tzlocal.go_to_percent, tzlocal.stop],
     meta: {disableDefaultResponse: true},
-    exposes: [],//, e.cover_position()],
+    exposes: [ exposes.enum('barrier Movement',exposes.access.STATE,["stopped", "closing", "opening"] ).withProperty('movingState').withDescription("barrier movement"),
+    		exposes.enum('Barrier Position',exposes.access.STATE,["Closed", "Ajar", "Open"] ).withProperty('barrierPosition').withDescription("barrier movement"),
+    		exposes.binary('Button', exposes.access.STATE_SET, "Button","Button").withValueToggle("Button").withProperty('stop').withDescription('button for garage door')], //, e.cover_position()],
     configure: async (device, coordinatorEndpoint, logger) => {
-        const endpoint = device.getEndpoint(8);
+        const endpoint = device.getEndpoint(1);
+	await reporting.moving_state
     },
 };
 
