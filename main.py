@@ -130,7 +130,7 @@ def main_loop ():
                 print(kwargs)
                 if 'attributes' in kwargs:
                   attr_bytes=gen.attribute_result(kwargs)
-                  zcl_header = payload_header + bytes([seq]) + _rap
+                  zcl_header = payload_header + bytes([seq]) + bytes([_rap])
                   payload = zcl_header+attr_bytes
                   print(payload)
                   com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
