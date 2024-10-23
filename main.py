@@ -79,6 +79,8 @@ def main_loop ():
               #if CommandType is not None:
               if command_name == "stop":
                   garage.command(seq, packet['payload'])
+                  payload = payload_header + bytes([seq]) + bytes([_def]) + 'b\x01' + 'b\x00'
+                  com.fancy_transmit(payload=payload, source_ep=packet['dest_ep'], dest_ep=packet['source_ep'], cluster=packet['cluster'], profile=packet['profile'])
               pass
           if packet['cluster'] == 6: #genOnOffCluster in HA Profile
               if packet['profile'] == 260: #HA profile
@@ -110,14 +112,14 @@ def main_loop ():
               print(bytes(packet['payload']))
               b = bytearray(packet['payload'])
               print(b[0])
-              payload=bytes([b[0], 00, b[1], b[2], 1, 8])
+              payload=bytes([b[0], 00, b[1], b[2], 1, 1])           
               com.fancy_transmit(payload=payload,source_ep=0,dest_ep=0,cluster=32773, profile=0)
               print("sent-endpoint-response")
           if packet['cluster']==4: #simple descriptor request
               print(bytes(packet['payload']))
               b = bytearray(packet['payload'])
               print(b[0])
-              payload = bytes([b[0], 00, b[1], b[2], 14, 8, 4, 1, 2, 0, 6, 4, 0, 0, 3, 0, 6,0, 3, 1,0, 0])
+              payload = bytes([b[0], 00, b[1], b[2], 14, 1, 4, 1, 2, 0, 6, 4, 0, 0, 3, 0, 6,0, 3, 1,0, 0])
               com.fancy_transmit(payload=payload, source_ep=0, dest_ep=0, cluster=32772, profile=0)
               print("simple descriptor response")
 
@@ -163,7 +165,7 @@ def main_loop ():
           payload=zcl_header+garage.position()+garage.movement()
           #dumb = bytes([12, 30, 16, 171, 5])
           #com.fancy_transmit(payload=bytes([12, 30, 16, 171, 10])+florp, source_ep=8, dest_ep=1, cluster=6, profile=260)
-          com.fancy_transmit(payload=payload , source_ep=8, dest_ep=1, cluster=259, profile=260)
+          com.fancy_transmit(payload=payload , source_ep=1, dest_ep=1, cluster=259, profile=260)
       if garage.watch():
           #payload_header + oob + bytes([_war])
           payl = payload_header + oob + bytes([_ra]) + garage.position()+ garage.movement()
@@ -172,7 +174,7 @@ def main_loop ():
           print("moving: "+ str(garage.moving))
           print("barrierPosition: "+ str(garage.barrier_position))
           print(payl)
-          com.fancy_transmit(payload=payl, source_ep=8, dest_ep=1, cluster=259, profile=260)
+          com.fancy_transmit(payload=payl, source_ep=1, dest_ep=1, cluster=259, profile=260)
           time.sleep(1)
           garage.update = False
 
